@@ -261,16 +261,15 @@
 </div>
 
 <script>
-    let timers = JSON.parse(localStorage.getItem('pikmin_timers')) || [];
-    
-    // 模擬 iPhone 經典清脆「叮叮」雙聲提示音
+    let timers = [];
+    let lastHeartbeat = Date.now(); // 記錄上一次心跳時間
+
     function playIphoneTone() {
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (!AudioContext) return;
             const ctx = new AudioContext();
             
-            // 第一聲
             let osc1 = ctx.createOscillator();
             let gain1 = ctx.createGain();
             osc1.type = 'sine';
@@ -282,7 +281,6 @@
             osc1.start(ctx.currentTime);
             osc1.stop(ctx.currentTime + 0.15);
 
-            // 第二聲
             let osc2 = ctx.createOscillator();
             let gain2 = ctx.createGain();
             osc2.type = 'sine';
@@ -302,7 +300,34 @@
         if (Notification.permission === 'default') {
             Notification.requestPermission();
         }
-        setInterval(updateTimers, 1000);
+        
+        // 核心載入
+        loadAndRender();
+
+        // 🌟 核心防錯 1：心跳異常偵測機制（防止休眠死機）
+        // 每 1 秒敲一次心跳，如果發現距離上一次心跳超過 3.5 秒（代表手機把網頁凍結了）
+        // 只要一亮起來，網頁就會「自動全頁重新整理」，強迫手機把乾淨的 LocalStorage 重新讀取出來，卡片絕對不會消失！
+        setInterval(() => {
+            const now = Date.now();
+            if (now - lastHeartbeat > 3500) {
+                console.log("偵測到手機休眠凍結，啟動硬體物理重整！");
+                window.location.reload(); 
+                return;
+            }
+            lastHeartbeat = now; // 更新心跳
+            updateTimers();
+        }, 1000);
+        
+        // 多重保險：切回畫面、亮螢幕時，也強制刷新
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                window.location.reload();
+            }
+        });
+    }
+
+    function loadAndRender() {
+        timers = JSON.parse(localStorage.getItem('pikmin_timers')) || [];
         renderTimers();
     }
     
@@ -336,7 +361,6 @@
         const stage2End = stage1End + (3 * 60 * 1000);   
         const stage3End = stage2End + (2 * 60 * 1000);   
 
-        // 🌟 修正：使用 unshift 取代 push，讓新建立的菇菇直接塞到陣列最前面
         timers.unshift({ 
             id: now, 
             name: name, 
@@ -442,12 +466,12 @@
 
     function renderTimers() {
         const list = document.getElementById('timerList');
+        if (!list) return;
         if (timers.length === 0) {
             list.innerHTML = '<p style="text-align:center; color:#888; margin-top:20px;">目前沒有計時中的菇菇 🍄</p>';
             return;
         }
         
-        // 🌟 保持不主動排序。因為建立時就用了 unshift，所以最新建立的會在陣列最前面、畫面的最上方
         list.innerHTML = timers.map(timer => {
             const endDate = new Date(timer.stage3End);
             const endStr = timer.isPaused ? '已暫停計時' : `最終提醒<br>${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}:${endDate.getSeconds().toString().padStart(2, '0')}`;
@@ -501,6 +525,7 @@
                 return;
             }
 
+            // 🌟 核心防錯 2：使用絕對未來時間減去現在時間，任憑系統怎麼凍結，只要恢復心跳時間就是準的！
             const timeLeftStage1 = timer.stage1End - now;
             const timeLeftStage2 = timer.stage2End - now;
             const timeLeftStage3 = timer.stage3End - now;
