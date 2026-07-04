@@ -1,3 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>皮克敏搶🍄計時器</title>
+    <style>
+        :root {
+            --bg-color: #f4f9f4;
+            --card-bg: #ffffff;
+            --primary-color: #4CAF50;
+            --secondary-color: #ff9800;
+            --danger-color: #f44336;
+            --info-color: #2196F3;
+            --gray-color: #757575;
+            --text-color: #333;
+        }
+        * {
+            box-sizing: border-box; /* 確保手機版寬度不會爆出去 */
+        }
+        body {
+            background-color: var(--bg-color) !important;
+            color: var(--text-color);
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            width: 100%;
+        }
+        .container { 
+            width: 100%; 
+            max-width: 500px; 
+        }
+        .add-form { 
+            background: var(--card-bg); 
+            padding: 15px; 
+            border-radius: 15px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+            margin-bottom: 15px; 
+            width: 100%;
+        }
+        .form-group { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 12px; 
+        }
+        
+        .triple-input { 
+            display: flex; 
+            justify-content: space-between; 
+            gap: 8px; 
+        }
+        .input-unit { 
+            display: flex; 
+            align-items: center; 
+            flex: 1; 
+            background: #fff; 
+            border: 2px solid #e0e0e0; 
+            border-radius: 10px; 
+            padding-right: 6px; 
+        }
+        .input-unit:focus-within { 
+            border-color: var(--primary-color); 
+        }
+        .input-unit input { 
+            border: none; 
+            padding: 12px 2px 12px 8px; 
+            width: 100%; 
+            text-align: center; 
+            font-size: 1.1rem; 
+            font-weight: bold; 
+            outline: none; 
+            background: transparent; 
+        }
+        .input-unit span { 
+            color: #666; 
+            font-size: 0.85rem; 
+            font-weight: bold; 
+            white-space: nowrap; 
+        }
+        
+        input[type="text"] { 
+            flex: 1; 
+            padding: 12px; 
+            border: 2px solid #e0e0e0; 
+            border-radius: 10px; 
+            font-size: 1rem; 
+            outline: none; 
+            background: #fff; 
+            width: 100%;
+        }
+        input[type="text"]:focus { 
+            border-color: var(--primary-color); 
+        }
+        
+        .btn-block { 
+            background: var(--primary-color); 
+            color: white; 
+            border: none; 
+            border-radius: 10px; 
+            padding: 14px; 
+            font-size: 1.1rem; 
+            font-weight: bold; 
+            cursor: pointer; 
+            width: 100%; 
+        }
+        
+        /* 計時器卡片與狀態 */
+        .timer-list { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+            width: 100%;
+        }
+        .timer-card { 
+            background: var(--card-bg); 
+            border-radius: 15px; 
+            padding: 15px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+            border-left: 6px solid var(--primary-color); 
+            width: 100%;
+        }
+        .timer-card.stage2 { border-left-color: var(--secondary-color); background-color: #fff9f0; }
+        .timer-card.completed { border-left-color: var(--danger-color); animation: blink 1s linear infinite; }
+        .timer-card.paused { border-left-color: var(--gray-color); background-color: #f5f5f5; }
+        .timer-card.timeout-stop { border-left-color: #b0bec5; background-color: #eceff1; animation: none; }
+        
+        .timer-main-info { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start; 
+            gap: 10px;
+        }
+        .timer-header-row { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            flex-wrap: wrap; 
+            margin-bottom: 4px; 
+        }
+        .timer-name { 
+            font-weight: bold; 
+            font-size: 1.1rem; 
+            word-break: break-all;
+        }
+        .timer-coords { 
+            font-size: 0.8rem; 
+            color: #555; 
+            background: #eee; 
+            padding: 2px 6px; 
+            border-radius: 6px; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 4px; 
+        }
+        .btn-copy { 
+            background: none; 
+            color: #2196F3; 
+            border: none; 
+            padding: 0; 
+            font-size: 0.8rem; 
+            font-weight: normal; 
+            width: auto; 
+            cursor: pointer; 
+        }
+        
+        .timer-status { 
+            font-size: 0.8rem; 
+            font-weight: bold; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            display: inline-block; 
+            margin-bottom: 6px; 
+        }
+        .status-1 { background: #e8f5e9; color: #2e7d32; }
+        .status-2 { background: #fff3e0; color: #e65100; }
+        .status-3 { background: #ffebee; color: #c62828; }
+        .status-paused { background: #e0e0e0; color: #424242; }
+        .status-stop { background: #cfd8dc; color: #37474f; }
+        
+        .timer-time { 
+            font-size: 1.8rem; 
+            font-family: monospace; 
+            font-weight: bold; 
+            color: #444; 
+            line-height: 1.2;
+            margin: 4px 0;
+        }
+        .timer-end-at { 
+            font-size: 0.75rem; 
+            color: #888; 
+            text-align: right;
+            white-space: nowrap;
+        }
+        
+        /* 手機按鈕優化：加大觸控範圍 */
+        .control-actions { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 6px; 
+            width: 100%; 
+        }
+        .btn-ctrl { 
+            padding: 12px 2px; 
+            border: none; 
+            border-radius: 8px; 
+            color: white; 
+            font-weight: bold; 
+            font-size: 0.85rem; 
+            cursor: pointer; 
+            text-align: center; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn-pause { background: var(--secondary-color); }
+        .btn-resume { background: var(--primary-color); }
+        .btn-restart { background: var(--info-color); }
+        .btn-edit { background: #9c27b0; }
+        .btn-del { background: var(--danger-color); }
+        
+        @keyframes blink { 0% { background-color: #fff; } 50% { background-color: #ffebee; } 100% { background-color: #fff; } }
+    </style>
+</head>
+<body>
+
 <header style="text-align: center; margin-bottom: 15px; width: 100%;">
     <h1 style="font-size: 1.5rem; color: #2e7d32; margin: 0; font-family: sans-serif;">皮克敏搶🍄計時器</h1>
 </header>
@@ -14,15 +243,15 @@
         
         <div class="form-group triple-input">
             <div class="input-unit">
-                <input type="number" id="inputHours" min="0" max="99" placeholder="0">
+                <input type="number" id="inputHours" min="0" max="99" placeholder="0" inputmode="numeric">
                 <span>時</span>
             </div>
             <div class="input-unit">
-                <input type="number" id="inputMinutes" min="0" max="59" placeholder="0">
+                <input type="number" id="inputMinutes" min="0" max="59" placeholder="0" inputmode="numeric">
                 <span>分</span>
             </div>
             <div class="input-unit">
-                <input type="number" id="inputSeconds" min="0" max="59" placeholder="0">
+                <input type="number" id="inputSeconds" min="0" max="59" placeholder="0" inputmode="numeric">
                 <span>秒</span>
             </div>
         </div>
@@ -32,79 +261,6 @@
 
     <div class="timer-list" id="timerList"></div>
 </div>
-
-<style>
-    :root {
-        --bg-color: #f4f9f4;
-        --card-bg: #ffffff;
-        --primary-color: #4CAF50;
-        --secondary-color: #ff9800;
-        --danger-color: #f44336;
-        --info-color: #2196F3;
-        --gray-color: #757575;
-        --text-color: #333;
-    }
-    body {
-        background-color: var(--bg-color) !important;
-        color: var(--text-color);
-        padding: 15px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    .container { width: 100%; max-width: 500px; }
-    .add-form { background: var(--card-bg); padding: 15px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px; }
-    .form-group { display: flex; gap: 10px; margin-bottom: 10px; }
-    
-    .triple-input { display: flex; justify-content: space-between; gap: 8px; }
-    .input-unit { display: flex; align-items: center; flex: 1; background: #fff; border: 2px solid #e0e0e0; border-radius: 10px; padding-right: 8px; }
-    .input-unit:focus-within { border-color: var(--primary-color); }
-    .input-unit input { border: none; padding: 12px 4px 12px 12px; width: 100%; text-align: center; font-size: 1.1rem; font-weight: bold; outline: none; background: transparent; }
-    .input-unit span { color: #666; font-size: 0.9rem; font-weight: bold; white-space: nowrap; }
-    
-    input[type="text"] { flex: 1; padding: 12px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 1rem; outline: none; background: #fff; }
-    input[type="text"]:focus { border-color: var(--primary-color); }
-    
-    button { background: var(--primary-color); color: white; border: none; border-radius: 10px; padding: 14px; font-size: 1.1rem; font-weight: bold; cursor: pointer; width: 100%; }
-    
-    /* 計時器卡片與狀態 */
-    .timer-list { display: flex; flex-direction: column; gap: 12px; }
-    .timer-card { background: var(--card-bg); border-radius: 15px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 12px; border-left: 6px solid var(--primary-color); }
-    .timer-card.stage2 { border-left-color: var(--secondary-color); background-color: #fff9f0; }
-    .timer-card.completed { border-left-color: var(--danger-color); animation: blink 1s linear infinite; }
-    .timer-card.paused { border-left-color: var(--gray-color); background-color: #f5f5f5; }
-    
-    /* 超時停止後的靜態灰色樣式 */
-    .timer-card.timeout-stop { border-left-color: #b0bec5; background-color: #eceff1; animation: none; }
-    
-    .timer-main-info { display: flex; justify-content: space-between; align-items: flex-start; }
-    .timer-header-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
-    .timer-name { font-weight: bold; font-size: 1.1rem; }
-    .timer-coords { font-size: 0.85rem; color: #555; background: #eee; padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; }
-    .btn-copy { background: none; color: #2196F3; border: none; padding: 0; font-size: 0.8rem; font-weight: normal; width: auto; cursor: pointer; }
-    .btn-copy:hover { text-decoration: underline; }
-    
-    .timer-status { font-size: 0.8rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px; }
-    .status-1 { background: #e8f5e9; color: #2e7d32; }
-    .status-2 { background: #fff3e0; color: #e65100; }
-    .status-3 { background: #ffebee; color: #c62828; }
-    .status-paused { background: #e0e0e0; color: #424242; }
-    .status-stop { background: #cfd8dc; color: #37474f; }
-    
-    .timer-time { font-size: 1.8rem; font-family: monospace; font-weight: bold; color: #444; }
-    .timer-end-at { font-size: 0.8rem; color: #888; }
-    
-    .control-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; }
-    .btn-ctrl { padding: 10px 4px; border: none; border-radius: 8px; color: white; font-weight: bold; font-size: 0.85rem; cursor: pointer; text-align: center; }
-    .btn-pause { background: var(--secondary-color); }
-    .btn-resume { background: var(--primary-color); }
-    .btn-restart { background: var(--info-color); }
-    .btn-edit { background: #9c27b0; }
-    .btn-del { background: var(--danger-color); }
-    
-    @keyframes blink { 0% { background-color: #fff; } 50% { background-color: #ffebee; } 100% { background-color: #fff; } }
-</style>
 
 <script>
     let timers = JSON.parse(localStorage.getItem('pikmin_timers')) || [];
@@ -134,8 +290,8 @@
 
         const now = Date.now();
         const stage1End = now + initialMs;
-        const stage2End = stage1End + (3 * 60 * 1000);   // 計時結束後，先倒數 3 分鐘（剩餘 5 ~ 2 分鐘）
-        const stage3End = stage2End + (2 * 60 * 1000);   // 再倒數 2 分鐘（剩餘 2 ~ 0 分鐘）
+        const stage2End = stage1End + (3 * 60 * 1000);   
+        const stage3End = stage2End + (2 * 60 * 1000);   
 
         timers.push({ 
             id: now, 
@@ -159,6 +315,9 @@
         hInput.value = '';
         mInput.value = '';
         sInput.value = '';
+        
+        // 讓手機輸入完自動收起鍵盤
+        document.activeElement.blur();
     }
 
     function togglePause(id) {
@@ -241,16 +400,16 @@
         timers.sort((a, b) => a.stage1End - b.stage1End);
         list.innerHTML = timers.map(timer => {
             const endDate = new Date(timer.stage3End);
-            const endStr = timer.isPaused ? '已暫停計時' : `最終提醒：${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}:${endDate.getSeconds().toString().padStart(2, '0')}`;
+            const endStr = timer.isPaused ? '已暫停計時' : `最終提醒<br>${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}:${endDate.getSeconds().toString().padStart(2, '0')}`;
             
             const coordsHtml = timer.coords 
-                ? `<span class="timer-coords">${timer.coords} <button class="btn-copy" onclick="copyCoords('${timer.coords.replace(/'/g, "\\'")}')">📋 複製</button></span>` 
+                ? `<span class="timer-coords">${timer.coords} <button class="btn-copy" onclick="copyCoords('${timer.coords.replace(/'/g, "\\'")}')">📋</button></span>` 
                 : '';
 
             return `
                 <div class="timer-card" id="card-${timer.id}">
                     <div class="timer-main-info">
-                        <div>
+                        <div style="flex: 1;">
                             <div id="status-${timer.id}" class="timer-status status-1">⏳ 搶菇倒數中</div>
                             <div class="timer-header-row">
                                 <div class="timer-name">${timer.name}</div>
@@ -297,23 +456,19 @@
             const timeLeftStage3 = timer.stage3End - now;
 
             if (timeLeftStage1 > 0) {
-                // 1. 正常遠征倒數
                 statusEl.innerText = "⏳ 距離菇菇消滅剩下";
                 statusEl.className = "timer-status status-1";
                 cardEl.className = "timer-card";
                 displayTime(timeEl, timeLeftStage1);
             } else if (timeLeftStage2 > 0) {
-                // 2. 總共 5 分鐘緩衝的前面 3 分鐘（即剩餘 5 ~ 2 分鐘區間）
                 statusEl.innerText = "⏳ 菇菇重生倒數中，請準備搶菇";
                 statusEl.className = "timer-status status-2";
                 cardEl.className = "timer-card stage2";
-                // 顯示目前距離最終重生的剩餘總時間 (timeLeftStage2 + 2分鐘)
                 displayTime(timeEl, timeLeftStage2 + (2 * 60 * 1000));
             } else if (timeLeftStage3 > 0) {
-                // 3. 總共 5 分鐘緩衝的後面 2 分鐘（即剩餘 2 ~ 0 分鐘區間）
                 statusEl.innerText = "🎉 倒數2分鐘！該搶菇囉！";
                 statusEl.className = "timer-status status-3";
-                cardEl.className = "timer-card completed"; // 紅色閃爍樣式
+                cardEl.className = "timer-card completed"; 
                 displayTime(timeEl, timeLeftStage3);
                 timeEl.style.color = "var(--danger-color)";
 
@@ -323,7 +478,6 @@
                     saveTimers();
                 }
             } else {
-                // 4. 超過 5 分鐘強制靜態
                 statusEl.innerText = "⚠️ 已結束 (新菇已生成)";
                 statusEl.className = "timer-status status-stop";
                 cardEl.className = "timer-card timeout-stop";
@@ -343,3 +497,5 @@
     }
     init();
 </script>
+</body>
+</html>
