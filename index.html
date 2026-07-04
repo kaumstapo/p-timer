@@ -16,7 +16,7 @@
             --text-color: #333;
         }
         * {
-            box-sizing: border-box; /* 確保手機版寬度不會爆出去 */
+            box-sizing: border-box;
         }
         body {
             background-color: var(--bg-color) !important;
@@ -107,7 +107,6 @@
             width: 100%; 
         }
         
-        /* 計時器卡片與狀態 */
         .timer-list { 
             display: flex; 
             flex-direction: column; 
@@ -198,7 +197,6 @@
             white-space: nowrap;
         }
         
-        /* 手機按鈕優化：加大觸控範圍 */
         .control-actions { 
             display: grid; 
             grid-template-columns: repeat(4, 1fr); 
@@ -264,9 +262,54 @@
 
 <script>
     let timers = JSON.parse(localStorage.getItem('pikmin_timers')) || [];
+    
+    // 模擬 iPhone 經典清脆「叮叮」雙聲提示音
+    function playIphoneTone() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            
+            // 第一聲
+            let osc1 = ctx.createOscillator();
+            let gain1 = ctx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(1050, ctx.currentTime); 
+            gain1.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+            osc1.connect(gain1);
+            gain1.connect(ctx.destination);
+            osc1.start(ctx.currentTime);
+            osc1.stop(ctx.currentTime + 0.15);
+
+            // 第二聲
+            let osc2 = ctx.createOscillator();
+            let gain2 = ctx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(1300, ctx.currentTime + 0.08); 
+            gain2.gain.setValueAtTime(0.3, ctx.currentTime + 0.08);
+            gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+            osc2.start(ctx.currentTime + 0.08);
+            osc2.stop(ctx.currentTime + 0.25);
+        } catch (e) {
+            console.log("音效播放失敗: ", e);
+        }
+    }
+
     function init() {
+        if (Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
         setInterval(updateTimers, 1000);
         renderTimers();
+    }
+    
+    function sendPushNotification(title, body) {
+        if (Notification.permission === 'granted') {
+            new Notification(title, { body: body });
+        }
     }
     
     function createTimer() {
@@ -305,7 +348,8 @@
             pausedTimeLeft1: null,
             pausedTimeLeft2: null,
             pausedTimeLeft3: null,
-            notified: false 
+            notifiedStage3: false, 
+            notifiedEnd: false     
         });
         saveTimers();
         renderTimers();
@@ -316,7 +360,6 @@
         mInput.value = '';
         sInput.value = '';
         
-        // 讓手機輸入完自動收起鍵盤
         document.activeElement.blur();
     }
 
@@ -346,10 +389,15 @@
 
         const now = Date.now();
         timer.isPaused = false;
-        timer.stage1End = now + timer.initialMs;
-        timer.stage2End = timer.stage1End + (3 * 60 * 1000);
-        timer.stage3End = timer.stage2End + (2 * 60 * 1000);
-        timer.notified = false;
+        timer.stage1End = now + timer.initialMs; 
+        timer.stage2End = timer.stage1End + (3 * 60 * 1000); 
+        timer.stage3End = timer.stage2End + (2 * 60 * 1000); 
+        timer.notifiedStage3 = false;
+        timer.notifiedEnd = false;
+
+        timer.pausedTimeLeft1 = null;
+        timer.pausedTimeLeft2 = null;
+        timer.pausedTimeLeft3 = null;
 
         saveTimers();
         renderTimers();
@@ -397,7 +445,7 @@
             list.innerHTML = '<p style="text-align:center; color:#888; margin-top:20px;">目前沒有計時中的菇菇 🍄</p>';
             return;
         }
-        timers.sort((a, b) => a.stage1End - b.stage1End);
+        
         list.innerHTML = timers.map(timer => {
             const endDate = new Date(timer.stage3End);
             const endStr = timer.isPaused ? '已暫停計時' : `最終提醒<br>${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}:${endDate.getSeconds().toString().padStart(2, '0')}`;
@@ -466,24 +514,36 @@
                 cardEl.className = "timer-card stage2";
                 displayTime(timeEl, timeLeftStage2 + (2 * 60 * 1000));
             } else if (timeLeftStage3 > 0) {
+                // 🔔 剩下最後 2 分鐘階段
                 statusEl.innerText = "🎉 倒數2分鐘！該搶菇囉！";
                 statusEl.className = "timer-status status-3";
                 cardEl.className = "timer-card completed"; 
                 displayTime(timeEl, timeLeftStage3);
                 timeEl.style.color = "var(--danger-color)";
 
-                if (!timer.notified) {
-                    if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 300]);
-                    timer.notified = true;
+                // 🌟 只在此階段觸發震動、音效與彈窗通知
+                if (!timer.notifiedStage3) {
+                    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                    playIphoneTone(); 
+                    sendPushNotification(`🍄 搶菇提醒！`, `【${timer.name}】再過 2 分鐘新菇就要生成囉！快打開遊戲！`);
+                    timer.notifiedStage3 = true;
                     saveTimers();
                 }
             } else {
+                // 🔔 倒數完全結束階段
                 statusEl.innerText = "⚠️ 已結束 (新菇已生成)";
                 statusEl.className = "timer-status status-stop";
                 cardEl.className = "timer-card timeout-stop";
                 timeEl.innerHTML = "--:--:--";
                 timeEl.style.color = "var(--gray-color)";
                 if(btnPause) btnPause.disabled = true;
+
+                // 🌟 修正：拿掉了結束時的音效與震動，改為純文字狀態更新，不打擾妳
+                if (!timer.notifiedEnd) {
+                    sendPushNotification(`🍄 菇菇孵出來了！`, `【${timer.name}】新菇已生成。`);
+                    timer.notifiedEnd = true;
+                    saveTimers();
+                }
             }
         });
     }
@@ -497,5 +557,3 @@
     }
     init();
 </script>
-</body>
-</html>
