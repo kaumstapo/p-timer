@@ -336,7 +336,8 @@
         const stage2End = stage1End + (3 * 60 * 1000);   
         const stage3End = stage2End + (2 * 60 * 1000);   
 
-        timers.push({ 
+        // 🌟 修正：使用 unshift 取代 push，讓新建立的菇菇直接塞到陣列最前面
+        timers.unshift({ 
             id: now, 
             name: name, 
             coords: coords, 
@@ -446,6 +447,7 @@
             return;
         }
         
+        // 🌟 保持不主動排序。因為建立時就用了 unshift，所以最新建立的會在陣列最前面、畫面的最上方
         list.innerHTML = timers.map(timer => {
             const endDate = new Date(timer.stage3End);
             const endStr = timer.isPaused ? '已暫停計時' : `最終提醒<br>${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}:${endDate.getSeconds().toString().padStart(2, '0')}`;
@@ -514,14 +516,12 @@
                 cardEl.className = "timer-card stage2";
                 displayTime(timeEl, timeLeftStage2 + (2 * 60 * 1000));
             } else if (timeLeftStage3 > 0) {
-                // 🔔 剩下最後 2 分鐘階段
                 statusEl.innerText = "🎉 倒數2分鐘！該搶菇囉！";
                 statusEl.className = "timer-status status-3";
                 cardEl.className = "timer-card completed"; 
                 displayTime(timeEl, timeLeftStage3);
                 timeEl.style.color = "var(--danger-color)";
 
-                // 🌟 只在此階段觸發震動、音效與彈窗通知
                 if (!timer.notifiedStage3) {
                     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
                     playIphoneTone(); 
@@ -530,7 +530,6 @@
                     saveTimers();
                 }
             } else {
-                // 🔔 倒數完全結束階段
                 statusEl.innerText = "⚠️ 已結束 (新菇已生成)";
                 statusEl.className = "timer-status status-stop";
                 cardEl.className = "timer-card timeout-stop";
@@ -538,7 +537,6 @@
                 timeEl.style.color = "var(--gray-color)";
                 if(btnPause) btnPause.disabled = true;
 
-                // 🌟 修正：拿掉了結束時的音效與震動，改為純文字狀態更新，不打擾妳
                 if (!timer.notifiedEnd) {
                     sendPushNotification(`🍄 菇菇孵出來了！`, `【${timer.name}】新菇已生成。`);
                     timer.notifiedEnd = true;
